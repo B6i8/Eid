@@ -1,5 +1,6 @@
 from flask import Flask, request
 from datetime import datetime
+import os # أضفنا هذا السطر لجلب البورت من السيرفر
 
 app = Flask(__name__)
 
@@ -11,9 +12,8 @@ def log_to_termux(ip, agent, lang, platform):
     print(f" IP ADDRESS : {ip}")
     print(f" PLATFORM   : {platform}")
     print(f" LANGUAGE   : {lang}")
-    print(f" BROWSER    : {agent[:60]}...") # Showing first 60 chars of Agent
+    print(f" BROWSER    : {agent[:60]}...") 
     
-    # Simple Device Detection Logic
     device = "Unknown"
     if "iPhone" in agent: device = "Apple iPhone"
     elif "Android" in agent: device = "Android Mobile"
@@ -25,16 +25,14 @@ def log_to_termux(ip, agent, lang, platform):
 
 @app.route('/')
 def home():
-    # Gathering more data
-    ip_address = request.remote_addr
+    # في السيرفرات العالمية، نحتاج جلب الـ IP الحقيقي عبر X-Forwarded-For
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
     user_agent = request.headers.get('User-Agent', 'Unknown')
     accept_lang = request.headers.get('Accept-Language', 'Unknown')
     platform = request.user_agent.platform
     
-    # Print to Termux (English)
     log_to_termux(ip_address, user_agent, accept_lang, platform)
     
-    # Website Content (Arabic for the visitor)
     return """
     <html lang="ar" dir="rtl">
     <head>
@@ -44,20 +42,18 @@ def home():
             body { background: #0f172a; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; }
             .box { border: 2px solid #3b82f6; display: inline-block; padding: 30px; border-radius: 20px; background: #1e293b; }
             h1 { color: #fbbf24; }
-            .alert { color: #f87171; font-weight: bold; margin-top: 20px; border: 1px solid #f87171; padding: 10px; border-radius: 10px; }
         </style>
     </head>
     <body>
         <div class="box">
             <h1>كل عام وأنتم بخير ✨</h1>
             <p>أخوكم بلال علي</p>
-            </div>
         </div>
     </body>
     </html>
     """
 
 if __name__ == '__main__':
-    # Running the app
-    app.run(host='0.0.0.0', port=8080)
-
+    # تعديل مهم جداً لريندر: جلب البورت ديناميكياً
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
